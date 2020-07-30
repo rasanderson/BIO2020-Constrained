@@ -67,3 +67,92 @@ most points along the expected diagonal line.
 When techniques to handle lots of response variables were first developed, this
 was the most common method of analysis. It is sometimes referred to as **indirect gradient analysis**
 and was widely used until the 1990's.
+
+## Problems with indirect gradient analysis
+The linear model presented on the previous page showed no obvious problems, so
+the disadvantages of indirect gradient analysis may not be immediately obvious.
+However, one assumption of linear models (and GLMs), is that all your response
+data points are independent of each other:
+
+* The composition of plants in your first quadrat should not affect those in your second. 
+* The gene sequence from your third isolate should not change those in your fifth
+* The bacterial OTU samples from Chile should be independent of the OTUs obtained from France
+* The types of insects found in your pitfall trap sample from Northumberland should
+not influence those found in your pitfall trap from Cornwall
+
+This seems fairly obvious, and in practical terms, when you collect the data from
+field surveys or laboratory experiments, the various samples are independent. The
+problem arises from what happens when you undertake an unconstrained ordination.
+
+### Non-independence of ordination scores
+Let's repeat our PCA of the sand dune vegetation, but omit one of the samples
+at random (sample 6):
+
+```{r compare_pca}
+# Multiple plot function from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/ 
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+dune_pca <- rda(dune)
+dune_pca_no6 <- rda(dune[-6,])
+dune_plt1 <- autoplot(dune_pca, display="sites", geom="text", legend.position = "none",
+                      title="PCA with full dataset")
+dune_plt2 <- autoplot(dune_pca_no6, display="sites", geom="text", legend.position = "none",
+                      title="PCA with one sample omitted")
+multiplot(dune_plt1, dune_plt2, cols=2)
+```
+
+You can see that the whole ordination has 'flipped' on its vertical axis. Depending
+on your data, sometimes both PC1 and PC2 will flip or rotate. The relative positions
+of the samples are still roughly the same, in the samples similar in their species
+composition (e.g. 17, 18 and 19) are still relatively close to each other, but they
+have nevertheless moved.
+
+**Key point**
+Whilst your original quadrats, isolates, samples or sites may have been independent
+from each other, once they are converted to PCA axis scores, the actual scores are
+**not** independent. Fortunately, an alternative method to resolve this problem,
+known as **constrained ordination** was developed in 1989, and has since become
+a standard technique for biologists.
