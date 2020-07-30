@@ -156,3 +156,154 @@ from each other, once they are converted to PCA axis scores, the actual scores a
 **not** independent. Fortunately, an alternative method to resolve this problem,
 known as **constrained ordination** was developed in 1989, and has since become
 a standard technique for biologists.
+
+## Constrained ordination
+In a constrained ordination the explanatory variables (categorical and/or
+continuous) are incorporated into the ordination itself. The sample scores are
+constrained to be linear combinations of the various explanatory variables,
+whilst simultaneously accounting for the composition of the attributes. So the
+overall format is:
+
+$$\text{Table of response variables} = \text{Explanatory variables} + \epsilon$$
+
+Note that the technique does not work effectively if you only have one or two
+explanatory variables, as it may constrain all your samples or attributes too
+much along one axis. The display of constrained analysis is in the form of 
+modified ordination plots, which can be very informative once you have learnt
+how to interpret them. You can also undertake formal statistical tests using
+analyses analogous to ANOVA. The technique will also cope with complex experimental
+designs, such as blocked designs, or time-series. You can also create interaction
+terms if needed.
+
+Constrained analysis exists in two main forms, linear and unimodal. The linear
+form is Redundancy Analysis (RDA) and unimodal is Canonical Correspondence Analysis
+(CCA). These are run using the `rda()` and `cca()` functions respectively, which
+you have already used for PCA and CA. However, if you give the functions explanatory
+variables they automatically change to RDA and CCA.
+
+## Example constrained ordination
+Let's look at our reindeer-grazed Pine forests that we discussed earlier. This
+comes with a large set of potential explanatory variables, about the soil chemistry,
+pH etc., stored in the table `varechem` but we will just use a few for simplicity:
+
+```{r varechem, echo=TRUE}
+head(varechem)
+summary(varechem)
+```
+
+Now the actual analysis, using CCA, as you will recall that we had to use CA rather
+than PCA for the unconstrained analysis of these data. We will just use potassium (`K`),
+phosphorus (`P`), Aluminium (`Al`), soil pH (`pH`), and the amount of bare ground 
+(`Baresoil`) as explanatories:
+
+```{r varespec_cca, exercise=TRUE}
+varespec_cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+summary(varespec_cca)[["cont"]][["importance"]]
+```
+
+When you run the `summary()` function on its own you will see a very large amount
+of output; this is fine in RStudio, but I have simplified it to just the `importance`
+measures for this website. Again, it provides information of the amount of variation
+explained by CCA1 (17.7%) and CCA2 (9.3%) so the first two axes explain roughly
+27% of the variation.
+
+What can be more useful are the plots. The default is a **triplot** which shows
+the samples (sites), attributes (species), and explanatory variables (soil chemistry)
+all in one plot. Note:
+
+* If the explanatory variables are **continuous** (as here) they are shown in the
+plot as arrows.
+* If the explanatory variables are **categorical** they are shown as points, with
+a different point for each of your category levels
+* You can of course have a mixture of continuous and categorical variables
+
+```{r varespec_triplot-setup}
+varespec_cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+```
+```{r varespec_triplot, exercise=TRUE}
+autoplot(varespec_cca)
+```
+```{r varespec_triplot-solution}
+autoplot(varespec_cca, geom="text", legend.position = "none")
+```
+
+Unless there are relatively few samples or attributes, the plot will not label
+the points unless you add the `geom="text"` option. Modify the script above to
+see the difference: with everything plotted this is probably too difficult to
+interpret. Nevertheless, even with this rather cluttered plot, you can immediately
+make inferences about the explanatory variables:
+
+* Important explanatory variables have **longer arrows**, less important variables
+have **short arrows**
+* Two explanatory variables that are **positively correlated** in their effects
+will point in the **same** direction
+* Two explanatory variables that are **negatively correlated** to each other will
+point in **opposite** directions
+* Two explanatory variables that are **correlated** with each other will have 
+arrows at roughly 90 degrees to each other.
+
+Looking at the explanatory variables above, which statement is correct?
+
+```{r interpret_explanatories}
+question("The following are negatively correlated with each other",
+         answer("K and P"),
+         answer("K and pH"),
+         answer("pH and Al"),
+         answer("Al and K"),
+         answer("P and Al"),
+         answer("Al and pH"),
+         answer("pH and Baresoil", correct=TRUE),
+         random_answer_order = TRUE,
+         allow_retry = TRUE)
+```
+
+To get a clearer picture of the samples and species, it is generally easier to
+plot them separately, along with the explanatory variables. Notice that in the
+commands below we ask `autoplot()` to `display=c("sites", "bp")` or `display=c("species", "bp")`
+where `bp` represents the "biplot" arrow points. If you have **categorical**
+explanatory variables replace these with `display=c("sites", "cn")` where the
+`cn` represents "centroids" for each level of your category. If you have a
+mixture of **both continuous and categorical** explanatories, use the format
+`display=c("sites", "bp", "cn")`,
+
+```{r cca_separate_plots-setup}
+varespec_cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+```
+```{r cca_separate_plots, exercise=TRUE}
+autoplot(varespec_cca, geom="text", display=c("sites", "bp"), legend.position = "none")
+autoplot(varespec_cca, geom="text", display=c("species", "bp"), legend.position = "none")
+```
+
+These plots tell you key things about the samples and attributes in relation to
+the explanatory variables. For example:
+
+* There is a relatively large amount of bare soil at samples 22, 16, 14, and 
+relatively little bare soil at sites 2, 3, 4, 9, 10, 12
+* Samples 24, 25, 27, 28 are relatively high in P and K, whilst samples 5, 6, 7
+13 and 18 have low P and K
+* Al and pH are probably highest in samples 3 and 4
+* Species associated with more bare soil include Betupube, Barbhatc, Ptilcili
+* Species associated with low K and P include Callvulg, Icmaeric and Vacculig
+
+### Bare soil is not soil chemistry!
+The longest arrow (and hence most important explanatory variable) is bare soil.
+However, this is not of course soil chemistry, and so you might be interested in
+looking at what is going on **after** taking into account the effects of bare soil.
+This is easy to do with a **partial constrained analysis**. Simply add the term
+`Condidition(Baresoil)` to your explanatory variables to remove its effect.
+
+```{r partial_cca, exercise=TRUE}
+varespec_cca2 <- cca(varespec ~ K + P + Al + pH + Condition(Baresoil), data=varechem)
+autoplot(varespec_cca2, geom="text", display=c("sites", "bp"), legend.position = "none")
+autoplot(varespec_cca2, geom="text", display=c("species", "bp"), legend.position = "none")
+```
+
+You can see that once we have "conditioned" for the effects of bare soil, the
+relationships between the explanatory variables are much clearer.
+
+**Note**. As there are a large number of attributes in these plots, they are 
+still difficult to read. The ubiquitous species in the centre of the plot are of
+little interest, and do not need labelling. At present there is not a simple way
+of switching off their labelling within ggvegan, but if you look 
+<a href="https://blogs.ncl.ac.uk/mep/2018/04/08/reproducible-publication-quality-multivariate-plots-in-r/" target="_blank">this website</a> it shows you one method of creating clearer plots.
+
