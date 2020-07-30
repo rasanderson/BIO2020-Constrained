@@ -1,0 +1,69 @@
+---
+title: "Constrained analyses"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(mosaic)
+library(vegan)
+library(ggvegan)
+data(dune)
+data(dune.env)
+data(varespec)
+data(varechem)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Multiple responses plus explanatory variables
+### Introduction
+Unconstrained ordination methods such as PCA, CA and NMDS allow you to summarise
+the relationships between your samples (sites, isolates, quadrats etc.) and your
+attributes (species, gene sequences etc.). They provide a useful method to 
+simplify your data so that it can be viewed in a 2-dimensional ordination plot.
+The scores from these plots, especially the first axis, can sometimes be related
+to potential explanatory variables to aid interpretation, as you showed with
+soil moisture and the dune vegetation analysis.
+
+If you have explanatory variables, you might be tempted to extract an ordination
+axis, and after visualising any patterns with a potential explanatory variable,
+undertake a linear model, with your chosen **ordination axis** as your response.
+For example, recall that you undertook a PCA of the sand dune vegetation data,
+and showed a clear pattern with Moisture:
+
+```{r dune_pca, echo=TRUE}
+# PCA of dune data
+dune_pca <- rda(dune)
+
+# Plot of PC1 vs PC2
+autoplot(dune_pca, layers="sites", legend.position="none", geom="text",
+         title = "PCA of dune vegetation; site codes.")
+
+# Extract PC1 and relate to soil moisture category
+dune_pc1 <- scores(dune_pca, display="sites", choices = 1)
+gf_boxplot(dune_pc1 ~ Moisture, data=dune.env)
+```
+
+Now let's do a linear model to formally test the relationship between soil
+moisture and dune vegetation composition as described by PC1. We'll display
+the ANOVA table, and check the first two model diagnostic plots (residuals and
+QQ plots):
+
+```{r dune_pca_lm, echo=TRUE}
+dune_lm <- lm(dune_pc1 ~ Moisture, data=dune.env)
+anova(dune_lm)
+mplot(dune_lm, which=1:2)
+
+```
+
+The relationship with moisture class is highly significant, with F=14.94426 and
+p=6.691419e-05 which is p=0.00006691419 (**remember** you would report these as
+"F=14.94, p<0.001"). There are no obvious problems with the residuals vs fitted
+plot, with an even scatter around the zero line. The QQ plot looks good, with
+most points along the expected diagonal line.
+
+When techniques to handle lots of response variables were first developed, this
+was the most common method of analysis. It is sometimes referred to as **indirect gradient analysis**
+and was widely used until the 1990's.
