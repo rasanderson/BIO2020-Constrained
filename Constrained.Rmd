@@ -259,19 +259,19 @@ question("The following are negatively correlated with each other",
 
 To get a clearer picture of the samples and species, it is generally easier to
 plot them separately, along with the explanatory variables. Notice that in the
-commands below we ask `autoplot()` to `display=c("sites", "bp")` or `display=c("species", "bp")`
-where `bp` represents the "biplot" arrow points. If you have **categorical**
-explanatory variables replace these with `display=c("sites", "cn")` where the
-`cn` represents "centroids" for each level of your category. If you have a
+commands below we ask `autoplot()` to `layers=c("sites", "biplot")` or `layers=c("species", "biplot")` where `biplot` represents the "biplot" arrow
+points for continuous explanatory variables. If you have **categorical**
+explanatory variables replace these with `layers=c("sites", "centroids")` where
+the`centroids` represents centre for each level of your category. If you have a
 mixture of **both continuous and categorical** explanatories, use the format
-`display=c("sites", "bp", "cn")`,
+`layers=c("sites", "biplot", "centroids")`,
 
 ```{r cca_separate_plots-setup}
 varespec_cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
 ```
 ```{r cca_separate_plots, exercise=TRUE}
-autoplot(varespec_cca, geom="text", display=c("sites", "bp"), legend.position = "none")
-autoplot(varespec_cca, geom="text", display=c("species", "bp"), legend.position = "none")
+autoplot(varespec_cca, geom="text", layers=c("sites", "biplot"), legend.position = "none")
+autoplot(varespec_cca, geom="text", layers=c("species", "biplot"), legend.position = "none")
 ```
 
 These plots tell you key things about the samples and attributes in relation to
@@ -285,7 +285,7 @@ relatively little bare soil at sites 2, 3, 4, 9, 10, 12
 * Species associated with more bare soil include Betupube, Barbhatc, Ptilcili
 * Species associated with low K and P include Callvulg, Icmaeric and Vacculig
 
-### Bare soil is not soil chemistry!
+### Bare soil is not soil chemistry
 The longest arrow (and hence most important explanatory variable) is bare soil.
 However, this is not of course soil chemistry, and so you might be interested in
 looking at what is going on **after** taking into account the effects of bare soil.
@@ -294,8 +294,8 @@ This is easy to do with a **partial constrained analysis**. Simply add the term
 
 ```{r partial_cca, exercise=TRUE}
 varespec_cca2 <- cca(varespec ~ K + P + Al + pH + Condition(Baresoil), data=varechem)
-autoplot(varespec_cca2, geom="text", display=c("sites", "bp"), legend.position = "none")
-autoplot(varespec_cca2, geom="text", display=c("species", "bp"), legend.position = "none")
+autoplot(varespec_cca2, geom="text", layers=c("sites", "biplot"), legend.position = "none")
+autoplot(varespec_cca2, geom="text", layers=c("species", "biplot"), legend.position = "none")
 ```
 
 You can see that once we have "conditioned" for the effects of bare soil, the
@@ -306,4 +306,201 @@ still difficult to read. The ubiquitous species in the centre of the plot are of
 little interest, and do not need labelling. At present there is not a simple way
 of switching off their labelling within ggvegan, but if you look 
 <a href="https://blogs.ncl.ac.uk/mep/2018/04/08/reproducible-publication-quality-multivariate-plots-in-r/" target="_blank">this website</a> it shows you one method of creating clearer plots.
+
+### What do the constrained ordination axes mean?
+One of te advantages of constrained ordination is that it is much easier to
+interpret the axes. For example, looking at the full ordination plot (including
+bare soil) you can see that the aluminium arrow (Al) is almost parallel with CCA1 on
+the x-axis. Thus we can assume that CCA1 provides some measure of aluminium,
+with low amounts at low CCA1 scores, and high amounts at high CCA1 scores.
+
+## Significance tests of constrained ordinations
+You can undertake what is known as a **permutation ANOVA** on your constrained
+ordination. This is not calculated through the usual method of least squares
+(see website explaining linear models). Instead, your sample x attributes data
+are randomly shuffled, and the ordination recalculated. This is done thousands
+of times. If your explanatory variables do have a strong effect in your data,
+then the real (unrandomised) data will produce a very different ordination from
+the perumted (randomised) data. If your explanatory variables have no effect,
+then there will be little difference between the real and permuted data.
+
+As with a typical ANOVA you produce F-values and p-statistics. Note, however,
+that as it is based on a randomisation procedure you will get slightly different
+results every time you carry out the permutation ANOVA, although the findings
+will be roughly the same. If you want to understand more about the detailed
+theory (optional) for permutation tests, see <a href=" https://doi.org/10.1111/j.2041-210X.2010.00078.x" target="_blank">here</a> .
+
+### ANOVA of explanatory variables
+You can check the importance of the explanatory variables using a `"terms"` option
+or a `"margin"`. The `terms` option is most appropriate for a formally designed
+experiment, where your explanatory variables include main effects and interaction
+terms, for example a laboratory experiment with a balanced number of replicates
+in each treatment level. This is analagous to the Type I Sums of Squares in
+linear models, and is good for balanced, designed experiments.
+
+However if you have an **unbalanced** design, the order in which you enter the
+explanatory variables into the model affects the results, and it is better to
+use the `margin` option. This takes into account potential collinearity (i.e.
+correlations) amongst the explanatory variables, and ensures that the order in
+which you enter the explanatory variables no longer matters. This is analagous
+to the Type III Sums of Squares in linear models. It is generally more appropriate
+for ecological surveys, such as this one, which are unbalanced.
+
+Run the following code several times. Notice how the exact F- and p-values you
+obtain differ slightly; by default it does 999 randomisations of your data,
+although you can force it to do more.
+
+```{r varespec_expl_anova-setup}
+varespec_cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+```
+```{r varespec_expl_anova, exercise=TRUE}
+anova(varespec_cca, by="margin")
+```
+
+Although the exact p-values will differ slightly each time you run the code, the
+overall conclusions are the same, namely that phosphorus (P) and aluminium (Al)
+are the two important variables.
+
+```{r why_not_baresoil}
+question("Why is bare soil not significant, even though the arrow is long in
+         the CCA plot?",
+         answer("Bare soil is a measure of the surface, rather than the below-
+                ground soil chemistry", message="No. The ANOVA is not clever
+                enough to know how you have sampled the explanatory data"),
+         answer("Bare soil is at a 45-degree angle in the plot, therefore is
+                not strongly related to any one variable", message="No. Whilst
+                bare soil is at a roughly 45-degree angle, this simple implies
+                that it is related to both CCA1 and CCA2."),
+         answer("Bare soil is collinear with aluminium and the p-value accounts
+                for correlations amongst variables", correct=TRUE, message="Good,
+                The 'margin' option takes into account collinearities. Bare soil
+                is negatively correlated with aluminium (and pH)."),
+         answer("The bare soil is related to grazing pressure, which was not
+                measured", message="It might or might not be related to grazing
+                pressure, but as this was not measured and included in the 
+                analysis, it is not relevant to the results of the ANOVA."),
+         allow_retry = TRUE)
+```
+
+### ANOVA of axes
+It is very useful to have a good understanding of the importance of each axis
+from your constrained ordination. Whilst the `summary(varespec_cca)` used earlier
+returned the percentage variation explained by each axis, sometimes only CCA1 is
+worth studying in detail, whilst (rarely) you may have data where CCA1, CCA2 and
+even CCA3 need to be checked. You can run a permutation ANOVA on the individual
+axes using the `by="axis"` option; again the exact p-values will differ slightly
+on each run.
+
+```{r varespec_axis_anova-setup}
+varespec_cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+```
+```{r varespec_axis_anova, exercise=TRUE}
+anova(varespec_cca, by="axis")
+```
+
+## Constrained ordination with categorical explanatory variables
+Let's return to our sand dune dataset, where you will recall that some explanatory
+variables were continuous (e.g. depth of the soil A1 horizon `A1`), whilst others
+were categorical (e.g. the type of management `Management`, with levels for
+biological farming `BF`, hobby farming `HF`, standard farming `SF` and nature
+conservation management `NM`). Whilst the analysis of these is identical to before,
+the way in which they are displayed in the resultant ordination graph is slightly
+different.
+
+You will recall that PCA was appropriate for these data, therefore we will use
+the equivalent **linear** constrained technique, redundancy analysis (RDA). This
+is called via the `rda()` function, and R recognises that it should be RDA rather
+than PCA as soon as you provide explanatory variables. 
+
+After running the code below, modify it to test the significance of the individual
+axes and variables, and extend the x-axis range on the species plot so that it
+is easier to read the `Management` variables.
+
+**Hints**:
+
+* Pipe your `autoplot` via the `%>%` symbol into `gf_lims()` to extend the x-axis
+* Use the `anova()` function with the `by=` option set correctly
+
+```{r dune_rda, exercise=TRUE}
+# Undertake the RDA with just two explanatory variables
+dune_rda <- rda(dune ~ A1 + Management, data=dune.env)
+
+# Plot samples and Management (as point for each level) and A1 (biplot arrow)
+autoplot(dune_rda, geom="text", layers=c("sites", "centroids", "biplot"), legend.position = "none")
+
+# Plot species and explanatories. Add "arrows=FALSE" to reduce clutter
+autoplot(dune_rda, geom="text", layers=c("species", "centroids", "biplot"), legend.position = "none", arrows=FALSE)
+```
+```{r dune_rda-solution}
+# Undertake the RDA with just two explanatory variables
+dune_rda <- rda(dune ~ A1 + Management, data=dune.env)
+
+# Plot samples and Management (as point for each level) and A1 (biplot arrow)
+autoplot(dune_rda, geom="text", layers=c("sites", "centroids", "biplot"), legend.position = "none")
+
+# gf_lims extends the x-axis
+autoplot(dune_rda, geom="text", layers=c("species", "centroids", "biplot"), legend.position = "none", arrows=FALSE) %>% 
+  gf_lims(x=c(-2.5, 3)) 
+
+# Anovas of axes and environmental variables
+anova(dune_rda, by="axis")
+anova(dune_rda, by="margin")
+```
+
+Notice how the categorical `Management` variable is used. Also note that you
+might want to consider renaming `Management` to something shorter, like `mng` so
+that the display is clear, since the level names are appended automatically at
+the end of the variable name.
+
+**Hints**:
+
+* You can automatically include all the explanatory variables by using ` ~ .` on
+the equation formula
+
+```{r dune_rda2, exercise=TRUE}
+# Add code to include all the explanatory variables, and check with anova
+```
+```{r dune_rda2-solution}
+# Include all the environmental variables; Note use of shortcut ~ . to enter
+# all the explanatories without needing to name them separately
+dune_rda2 <- rda(dune ~ ., data=dune.env)
+
+# Plots
+autoplot(dune_rda2, geom="text", layers=c("sites", "centroids", "biplot"), legend.position = "none")
+autoplot(dune_rda2, geom="text", layers=c("species", "centroids", "biplot"), legend.position = "none", arrows=FALSE)
+
+anova(dune_rda2, by="margin")
+```
+
+**Note**
+
+* as there is a large amount of collinearity amongst the variables, none is 
+significant when all are included
+* Some of the categorical explanatory variables are ordered (ranked) factors;
+these are shown with points rather than arrows
+
+### Simplifying down to a minimal number of explanatories
+When you have a large number of explanatory variables, it can be useful to 
+simplify down to a minimal number of key ones, to try and reduce the collinearity
+problems that you have just seen. This can be done through multiple `anova()`
+tests, dropping the least significant variable, and repeating. Fortunately this
+can be done automatically using the `ordistep()` function. You create your
+initial constrained ordination with all your explanatory variables, pass it to
+`ordistep()` and let it simplify your data. It does produce rather a lot of
+output as it grinds through your data, but the end-product is useful.
+
+Let's try it with your `varespec` data, as the `varechem` dataset is very large
+with 14 potential explanatory variables. It will generally err on the side of
+caution and retain some non-significant explanatory variables.
+
+```{r ordistep, exercise=TRUE}
+# Create full ordination with all the explanatory variables, using the ~ .
+# syntax to save you having to type the names of all 14 variables separately
+varespec_bigcca <- cca(varespec ~ . , data=varechem)
+varespec_mincca <- ordistep(varespec_bigcca)
+
+# Check results
+anova(varespec_mincca, by="margin")
+```
+
 
