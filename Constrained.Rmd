@@ -495,13 +495,15 @@ output as it grinds through your data, but the end-product is useful.
 
 Let's try it with your `varespec` data, as the `varechem` dataset is very large
 with 14 potential explanatory variables. It will generally err on the side of
-caution and retain some non-significant explanatory variables.
+caution and retain some non-significant explanatory variables. **Note** The 
+following code will generate a large amount of output as it steps through all
+possible combinations of your explanatory variables.
 
 ```{r ordistep, exercise=TRUE}
 # Create full ordination with all the explanatory variables, using the ~ .
 # syntax to save you having to type the names of all 14 variables separately
 varespec_bigcca <- ordi_cca(varespec ~ . , data=varechem)
-varespec_mincca <- ordistep(varespec_bigcca)
+varespec_mincca <- ordi_step(varespec_bigcca)
 
 # Check results
 anova(varespec_mincca, by="margin")
