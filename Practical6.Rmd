@@ -1,0 +1,66 @@
+---
+title: "BIO2020 - Constrained ordination"
+author: "Roy Sanderson"
+date: "07/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Unconstrained ordination methods such as PCA, CA and NMDS allow you to summarise
+the relationships between your samples (sites, isolates, quadrats etc.) and your
+attributes (species, gene sequences etc.). They provide a useful method to 
+simplify your data so that it can be viewed in a 2-dimensional ordination plot.
+The scores from these plots, especially the first axis, can sometimes be related
+to potential explanatory variables to aid interpretation, as you showed with
+soil moisture and the dune vegetation analysis.
+
+If you have explanatory variables, you might be tempted to extract an ordination
+axis, and after visualising any patterns with a potential explanatory variable,
+undertake a linear model, with your chosen **ordination axis** as your response. This is sometimes also called **indirect gradient analysis**. However, one assumption of linear models (and GLMs), is that all your response data points are independent of each other:
+
+* The composition of plants in your first quadrat should not affect those in your second. 
+* The gene sequence from your third isolate should not change those in your fifth
+* The bacterial OTU samples from Chile should be independent of the OTUs obtained from France
+* The types of insects found in your pitfall trap sample from Northumberland should
+not influence those found in your pitfall trap from Cornwall
+
+This seems fairly obvious, and in practical terms, when you collect the data from
+field surveys or laboratory experiments, the various samples are independent. The
+problem arises from what happens when you undertake an unconstrained ordination.
+
+The challenge is that the sample scores within an ordination axis are **not** independent of each other. Indeed if a single sample is removed from your dataset
+there is the risk that all the others will shift, although their **relative** positions to each other will remain constant. See [this example of the problems in a PCA](https://naturalandenvironmentalscience.shinyapps.io/Constrained/#section-problems-with-indirect-gradient-analysis) when one row is removed. One assumption of conventional linear models is that each sample (row) is independent, yet it is obvious that ordination scores breach this assumption.
+
+Fortunately, an alternative method to resolve this problem,
+known as **constrained ordination** was developed in 1989, and has since become
+a standard technique for biologists.
+
+## Constrained ordination
+In a constrained ordination the explanatory variables (categorical and/or
+continuous) are incorporated into the ordination itself. The sample scores are
+constrained to be linear combinations of the various explanatory variables,
+whilst simultaneously accounting for the composition of the attributes. So the
+overall format is:
+
+$$\text{Table of response variables} = \text{Explanatory variables} + \epsilon$$
+
+Note that the technique does not work effectively if you only have one or two
+explanatory variables, as it may constrain all your samples or attributes too
+much along one axis. The display of constrained analysis is in the form of 
+modified ordination plots, which can be very informative once you have learnt
+how to interpret them. You can also undertake formal statistical tests using
+analyses analogous to ANOVA. The technique will also cope with complex experimental
+designs, such as blocked designs, or time-series. You can also create interaction
+terms if needed. Constrained analysis exists in two main forms, linear and unimodal. The linear form is Redundancy Analysis (RDA) and unimodal is Canonical Correspondence Analysis (CCA). These are run using the `ordi_rda()` and `ordi_cca()` functions respectively.
+
+The overall aim of this practical is to introduce you to the analysis, interpretation and display of multi-variable data with explanatory variables through constrained ordination. Specific objectives are to:
+
+1. Use unimodal methods to analyse the tundra vegetation dataset you have already considered, visualise and interpret the ordination plots
+2. Demonstrate "permutation ANOVA" of the whole analysis, different explanatory variables, and individual ordination axes
+3. Use stepwise selection to identify the minimum number of explanatory variables.
+
+
