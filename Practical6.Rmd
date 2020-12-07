@@ -9,6 +9,7 @@ output: html_document
 library(bio2020)
 data("varespec")
 data("varechem")
+varespec_cca <- ordi_cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -69,7 +70,7 @@ The overall aim of this practical is to introduce you to the analysis, interpret
 The approach for the analysis and interpretation of linear methods is very similar.
 
 # 1. Unimodal analysis and visualisation
-## 1.2 Study dataset
+## 1.1 Study dataset
 The study dataset is one we have looked at already, that comes with the `vegan` package, namely the `varespec` dataset reindeer-grazed lichen pasture data published in Vare et al (1995). This has 24 rows (samples) and 44 columns (species) and form our "response" dataset. There is also a `varechem` dataset, with 14 columns containing soil characteristics. These are the "explanatory" dataset, and of course 14 explanatory variables is a very large number and difficult to interpret. This is where constrained ordination can help us simplify the data to aid understanding. The basic model we therefore have is:
 
 
@@ -94,3 +95,103 @@ View(varechem)
 ```
 
 
+## 1.2 Unimodal constrained ordination
+Canonical correspondence analysis (CCA) provides a robust method of analysis. We will use the `ordi_cca()` function, from the `bio2020` package, although this is just a "wrapper" function to provide syntactical consistency for teaching purposes for `vegan`'s `cca` function. If you want to see the full help for the function type `?cca` in the Console (warning: it is long and complicated!).
+
+For simplicity, we will begin by just looking at potassium (`K`),
+phosphorus (`P`), Aluminium (`Al`), soil pH (`pH`), and the amount of bare ground 
+(`Baresoil`) as explanatories:
+
+```{r varespec_cca, eval=FALSE}
+varespec_cca <- ordi_cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+summary(varespec_cca)
+```
+
+When you run the `summary()` function on its own you will see a very large amount
+of output; this is fine in RStudio. Scroll up in the Console and you will eventually find the most important part, namely the amount of variation explained by the first two axes, and you should see (when converted to a percentage) that CCA1 explains (17.7%) and CCA2 (9.3%) so the first two axes explain roughly 27% of the variation.
+
+What can be more useful are the plots. The default is a **triplot** which shows
+the samples (sites), attributes (species), and explanatory variables (soil chemistry)
+all in one plot. Note:
+
+* If the explanatory variables are **continuous** (as here) they are shown in the
+plot as arrows.
+* If the explanatory variables are **categorical** they are shown as points, with
+a different point for each of your category levels
+* You can of course have a mixture of continuous and categorical variables
+
+```{r varespec_triplot}
+ordi_plot(varespec_cca, geom="text")
+```
+
+Unless there are relatively few samples or attributes, the plot will not label
+the points unless you add the `geom="text"` option. This gives a rather cluttered plot, so you will probably find it easier to store the plot results in a new R object called `varespec_cca_plt` and then use `ordi_identify()` from the `bio2020` package to interactively identify points with your mouse:
+
+```{r, eval=FALSE}
+# Store plot in an R object
+varespec_cca_plt <- ordi_plot(varespec_cca, geom="point")
+
+# Display the plot on screen
+varespec_cca_plt
+
+# Interactively label some points
+ordi_identify(varespec_cca_plt)
+```
+
+
+You can make inferences about the explanatory variables based on the following rules:
+
+* Important explanatory variables have **longer arrows**, less important variables
+have **short arrows**
+* Two explanatory variables that are **positively correlated** in their effects
+will point in the **same** direction
+* Two explanatory variables that are **negatively correlated** to each other will
+point in **opposite** directions
+* Two explanatory variables that are **correlated** with each other will have 
+arrows at roughly 90 degrees to each other.
+
+You can see that Aluminium (`Al`), Phosphorus (`P`) and bare soil (`Baresoil`) are the most important variables, as these have the longest arrows. Al and pH are positively correlated with other (arrows point in same direction), and K and P are positively correlated (roughly) as arrows point in the same direction. pH and Baresoil are negatively correlated (arrows point in opposite directions). pH and P are uncorrelated with each other (arrows roughly 90-degrees).
+
+## 1.3 Simplifying the plot to view samples or species
+There is still a lot of information in the plots so you can simplify them if you wish by only showing the arrows and the rows (samples) and columns (species). Run this code, or if you prefer, store in a graph object and use `ordi_identify()` to only label selected points:
+
+```{r, eval=FALSE}
+ordi_plot(varespec_cca, geom="text", layers=c("sites", "biplot"))
+ordi_plot(varespec_cca, geom="text", layers=c("species", "biplot"))
+```
+
+These plots, especially the species one, are quite cluttered as the **ubiquituous species** that occur in lots of samples overlap in the middle. You can if you wish only label selected points using `ordi_identify()`:
+
+```{r, eval=FALSE}
+# Sites; save in R object and label points with mouse
+varespec_cca_site_plt <- ordi_plot(varespec_cca, geom="point", layers=c("sites", "biplot"))
+varespec_cca_site_plt
+ordi_identify(varespec_cca_site_plt)
+
+# Species; save in R object and label points with mouse
+varespec_cca_spp_plt  <- ordi_plot(varespec_cca, geom="point", layers=c("species", "biplot"))
+varespec_cca_spp_plt
+ordi_identify(varespec_cca_spp_plt)
+```
+
+From these plots we can start to interpret the relationships between our explanatory variables and individual samples or species:
+
+* There is a relatively large amount of bare soil at samples 22, 16, 14, and relatively little bare soil at sites 2, 3, 4, 9, 10, 12
+* Samples 24, 25, 27, 28 are relatively high in P and K, whilst samples 5, 6, 7 13 and 18 have low P and K
+* Al and pH are probably highest in samples 3 and 4
+* Species associated with more bare soil include Betupube, Barbhatc, Ptilcili
+* Species associated with low K and P include Callvulg, Icmaeric and Vacculig
+
+## 1.4 Bare soil is not soil chemistry
+The longest arrow (and hence most important explanatory variable) is bare soil. However, this is not of course soil chemistry, and so you might be interested in looking at what is going on after taking into account the effects of bare soil. This is easy to do with a **partial constrained analysis**. Simply add the term `Condition(Baresoil)` to your explanatory variables to remove its effect.
+
+```{r, eval=FALSE}
+# Partial CCA, storing the results in a new R object
+varespec_cca2 <- ordi_cca(varespec ~ K + P + Al + pH + Condition(Baresoil), data=varechem)
+
+# If you find these plots too cluttered, use ordi_identify
+ordi_plot(varespec_cca2, geom="text", layers=c("sites", "biplot"))
+ordi_plot(varespec_cca2, geom="text", layers=c("species", "biplot"))
+```
+
+The relationships between the remaining soil chemistry variables are now clearer. Partial ordination using a "conditioning" variable is a useful way of seeing what is going on in your data **after** having removed an important, but less scientifically interesting, variable to the question you are trying to address.
