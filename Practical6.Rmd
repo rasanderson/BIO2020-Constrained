@@ -6,6 +6,9 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+library(bio2020)
+data("varespec")
+data("varechem")
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -46,7 +49,7 @@ constrained to be linear combinations of the various explanatory variables,
 whilst simultaneously accounting for the composition of the attributes. So the
 overall format is:
 
-$$\text{Table of response variables} = \text{Explanatory variables} + \epsilon$$
+$$\textit{Table of response variables} = \textit{Explanatory variables} + \epsilon$$
 
 Note that the technique does not work effectively if you only have one or two
 explanatory variables, as it may constrain all your samples or attributes too
@@ -59,8 +62,35 @@ terms if needed. Constrained analysis exists in two main forms, linear and unimo
 
 The overall aim of this practical is to introduce you to the analysis, interpretation and display of multi-variable data with explanatory variables through constrained ordination. Specific objectives are to:
 
-1. Use unimodal methods to analyse the tundra vegetation dataset you have already considered, visualise and interpret the ordination plots
+1. Use unimodal methods to analyse, visualise and interpret the ordination plots
 2. Demonstrate "permutation ANOVA" of the whole analysis, different explanatory variables, and individual ordination axes
 3. Use stepwise selection to identify the minimum number of explanatory variables.
+
+The approach for the analysis and interpretation of linear methods is very similar.
+
+# 1. Unimodal analysis and visualisation
+## 1.2 Study dataset
+The study dataset is one we have looked at already, that comes with the `vegan` package, namely the `varespec` dataset reindeer-grazed lichen pasture data published in Vare et al (1995). This has 24 rows (samples) and 44 columns (species) and form our "response" dataset. There is also a `varechem` dataset, with 14 columns containing soil characteristics. These are the "explanatory" dataset, and of course 14 explanatory variables is a very large number and difficult to interpret. This is where constrained ordination can help us simplify the data to aid understanding. The basic model we therefore have is:
+
+
+$$\textit{Tundra vegetation} = \textit{Soil chemistry} + \epsilon$$
+
+This is a vegetation ecology example. However, I have published papers using this method on gene sequences from microbial data, and it can be applied to any discipline where you have large numbers of potential response and explanatory variables.
+
+Begin by loading the two datasets, and explore their contents, for example
+
+```{r, eval=FALSE}
+library(bio2020) # auto-loads the vegan library
+
+# Access the example datasets
+data("varespec")
+data("varechem")
+
+# Explore the data
+summary(varespec)
+summary(varechem)
+View(varespec)
+View(varechem)
+```
 
 
