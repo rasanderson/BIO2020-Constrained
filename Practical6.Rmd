@@ -3,9 +3,9 @@ title: "Constrained ordination: including explanatory variables"
 subtitle: "BIO2020 Statistics and experimental design for biologists"
 author: "Roy Sanderson"
 output:
-  html_document: default
   word_document:
      reference_docx: template.docx
+  html_document: default
   pdf_document: default
 ---
 
@@ -151,7 +151,7 @@ have **short arrows**
 will point in the **same** direction
 * Two explanatory variables that are **negatively correlated** to each other will
 point in **opposite** directions
-* Two explanatory variables that are **correlated** with each other will have 
+* Two explanatory variables that are **uncorrelated** with each other will have 
 arrows at roughly 90 degrees to each other.
 
 You can see that Aluminium (`Al`), Phosphorus (`P`) and bare soil (`Baresoil`) are the most important variables, as these have the longest arrows. Al and pH are positively correlated with other (arrows point in same direction), and K and P are positively correlated (roughly) as arrows point in the same direction. pH and Baresoil are negatively correlated (arrows point in opposite directions). pH and P are uncorrelated with each other (arrows roughly 90-degrees).
