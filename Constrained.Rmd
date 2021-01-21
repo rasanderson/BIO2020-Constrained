@@ -6,7 +6,7 @@ runtime: shiny_prerendered
 
 ```{r setup, include=FALSE}
 library(learnr)
-#library(mosaic)
+library(mosaic)
 library(vegan)
 #library(bio2020)
 source("nes8010.R")
@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ### Introduction
 Unconstrained ordination methods such as PCA, CA and NMDS allow you to summarise
 the relationships between your samples (sites, isolates, quadrats etc.) and your
-attributes (species, gene sequences etc.). They provide a useful method to 
+attributes (species, metagenomics data etc.). They provide a useful method to 
 simplify your data so that it can be viewed in a 2-dimensional ordination plot.
 The scores from these plots, especially the first axis, can sometimes be related
 to potential explanatory variables to aid interpretation, as you showed with
@@ -44,13 +44,21 @@ ordi_plot(dune_pca, layers="sites", geom="text",
 
 # Extract PC1 and relate to soil moisture category
 dune_pc1 <- scores(dune_pca, display="sites", choices = 1)
-gf_boxplot(dune_pc1 ~ Moisture, data=dune.env)
+ggplot(aes(y = dune_pc1, x = Moisture), data=dune.env) +
+  geom_boxplot()
+
+# ggformula alternative
+#gf_boxplot(dune_pc1 ~ Moisture, data=dune.env)
 ```
 
 Now let's do a linear model to formally test the relationship between soil
 moisture and dune vegetation composition as described by PC1. We'll display
 the ANOVA table, and check the first two model diagnostic plots (residuals and
-QQ plots) via the `mplot()` function:
+QQ plots) via the `mosaic` package `mplot()` function. Don't worry if you are
+not fully familiar with linear models and diagnostic plots yet, as these will be
+covered in more detail elsewhere in NES8010. It is simply one way of trying to
+measure the effect of an environmental variable (soil moisture) on the species,
+and diagnostic plots check whether the linear model is working correctly.
 
 ```{r dune_pca_lm, echo=TRUE}
 dune_lm <- lm(dune_pc1 ~ Moisture, data=dune.env)
@@ -66,8 +74,7 @@ plot, with an even scatter around the zero line. The QQ plot looks good, with
 most points along the expected diagonal line.
 
 When techniques to handle lots of response variables were first developed, this
-was the most common method of analysis. It is sometimes referred to as **indirect gradient analysis**
-and was widely used until the 1990's.
+was the most common method of analysis. It is sometimes referred to as **indirect gradient analysis** and was widely used until the 1990's. However, it has problems...
 
 ## Problems with indirect gradient analysis
 The linear model presented on the previous page showed no obvious problems, so
@@ -77,7 +84,8 @@ data points are independent of each other:
 
 * The composition of plants in your first quadrat should not affect those in your second. 
 * The gene sequence from your third isolate should not change those in your fifth
-* The bacterial OTU samples from Chile should be independent of the OTUs obtained from France
+* Bird survey in one woodland should be independent from birds in another wood
+* Fish survey data in the North Sea should be independent from Irish Sea data
 * The types of insects found in your pitfall trap sample from Northumberland should
 not influence those found in your pitfall trap from Cornwall
 
@@ -420,7 +428,8 @@ is easier to read the `Management` variables.
 
 **Hints**:
 
-* Pipe your `ordi_plot` via the `%>%` symbol into `gf_lims()` to extend the x-axis
+* Modify `ordi_plot` by adding the `+` symbol at the end then use the `ggplot2`
+function `xlim`
 * Use the `anova()` function with the `by=` option set correctly
 
 ```{r dune_rda, exercise=TRUE}
@@ -440,9 +449,9 @@ dune_rda <- ordi_rda(dune ~ A1 + Management, data=dune.env)
 # Plot samples and Management (as point for each level) and A1 (biplot arrow)
 ordi_plot(dune_rda, geom="text", layers=c("sites", "centroids", "biplot"))
 
-# gf_lims extends the x-axis
-ordi_plot(dune_rda, geom="text", layers=c("species", "centroids", "biplot")) %>% 
-  gf_lims(x=c(-2.5, 3)) 
+# Extend the x-axis
+ordi_plot(dune_rda, geom="text", layers=c("species", "centroids", "biplot")) + 
+  xlim(-2.5, 3)
 
 # Anovas of axes and environmental variables
 anova(dune_rda, by="axis")
@@ -510,4 +519,10 @@ varespec_mincca <- ordi_step(varespec_bigcca)
 anova(varespec_mincca, by="margin")
 ```
 
+There are lots of potential risks of unthinking use of stepwise selection, as it
+is easy to discard biologically meaningful variables. Therefore, if you look at
+the final output from your permutation ANOVA table, you will notice that several
+"marginally non-significant" variables have been retained. However, remember
+that the p<0.05 significance threshold is an **arbitrary convention** and so it
+is useful to also check borderline variables too.
 
