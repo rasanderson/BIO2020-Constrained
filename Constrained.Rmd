@@ -6,9 +6,10 @@ runtime: shiny_prerendered
 
 ```{r setup, include=FALSE}
 library(learnr)
-library(mosaic)
+#library(mosaic)
 library(vegan)
-library(bio2020)
+#library(bio2020)
+source("nes8010.R")
 data(dune)
 data(dune.env)
 data(varespec)
