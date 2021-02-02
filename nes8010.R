@@ -2,6 +2,12 @@
 # The script provides additional functions to make using the analyses simpler,
 # and change the default plots to a format compatible with ggplot2
 
+# grid package needs installing for ordi_identify
+my_packages <- c("grid")   # Specify extra packages
+not_installed <- my_packages[!(my_packages %in% installed.packages()[ , "Package"])]    # Extract not installed packages
+if(length(not_installed)) install.packages(not_installed)       
+library(grid)
+
 #' Interactive identify
 #'
 #' Interactive identify ggvegan species
@@ -329,7 +335,7 @@ anova3 <- function(lm_mod, ...){
 }
 
 
-##' @title Fortify a \code{"mataMDS"} object.
+##' @title Fortify a \code{"metaMDS"} object.
 ##'
 ##' @description
 ##' Fortifies an object of class \code{"metaMDS"} to produce a
@@ -361,25 +367,55 @@ anova3 <- function(lm_mod, ...){
 ##'
 ##' ord <- metaMDS(dune)
 ##' head(fortify(ord))
-`fortify.metaMDS` <- function(model, data, ...) {
-  samp <- scores(model, display = "sites", ...)
-  spp <- tryCatch(scores(model, display = "species", ...),
-                  error = function(c) {NULL})
-  if (!is.null(spp)) {
-    df <- rbind(samp, spp)
-    df <- as.data.frame(df)
-    df <- cbind(Score = factor(rep(c("sites","species"),
-                                   c(nrow(samp), nrow(spp)))),
-                Label = c(rownames(samp), rownames(spp)),
-                df)
-  } else {
-    df <- data.frame(Score = factor(rep("sites", nrow(df))),
-                     Label = rownames(samp),
-                     samp)
-  }
-  rownames(df) <- NULL
-  df
-}
+# `fortify.metaMDS` <- function(model, data, ...) {
+#   samp <- scores(model, display = "sites", ...)
+#   spp <- tryCatch(scores(model, display = "species", ...),
+#                   error = function(c) {NULL})
+#   if (!is.null(spp)) {
+#     df <- rbind(samp, spp)
+#     df <- as.data.frame(df)
+#     df <- cbind(Score = factor(rep(c("sites","species"),
+#                                    c(nrow(samp), nrow(spp)))),
+#                 Label = c(rownames(samp), rownames(spp)),
+#                 df)
+#   } else {
+#     df <- data.frame(Score = factor(rep("sites", nrow(df))),
+#                      Label = rownames(samp),
+#                      samp)
+#   }
+#   rownames(df) <- NULL
+#   df
+# }
+
+# `fortify.metaMDS` <- function(model, data, axes = 1:2,
+#                           display = c("sites"), ...) {
+#   ## extract scores
+#   scrs <- scores(model, choices = axes, display = display, ...)
+#   ## handle case of only 1 set of scores
+#   if (length(display) == 1L) {
+#      scrs <- list(scrs)
+#      nam <- switch(display,
+#                   sp = "species",
+#                   species = "species",
+#                   si = "sites",
+#                   sites = "sites",
+#                   stop("Unknown value for 'display'"))
+#     names(scrs) <- nam
+#   }
+#   miss <- vapply(scrs, function(x ) all(is.na(x)), logical(1L))
+#   scrs <- scrs[!miss]
+#   nams <- names(scrs)
+#   nr <- vapply(scrs, FUN = NROW, FUN.VALUE = integer(1))
+#   df <- do.call('rbind', scrs)
+#   rownames(df) <- NULL
+#   df <- as.data.frame(df)
+#   df <- cbind(Score = factor(rep(nams, times = nr)),
+#               Label = unlist(lapply(scrs, rownames), use.names = FALSE),
+#               df)
+#   df
+# }
+# 
+
 
 
 
@@ -559,13 +595,14 @@ anova3 <- function(lm_mod, ...){
 ##'
 ##' sol <- ordi_nmds(dune)
 ##' ordi_plot(sol)
-`ordi_plot.metaMDS` <- function(object, axes = c(1,2), geom = c("point", "text"),
+`ordi_plot.metaMDS` <- function(object, axes=c(1,2), geom = c("point", "text"),
                                 layers = c("species", "sites"),
                                 legend.position = "none",
                                 title = NULL, subtitle = NULL, caption = NULL,
                                 ylab, xlab, ...) {
   axes <- rep(axes, length.out = 2L)
-  obj <- fortify(object, axes = axes, ...)
+  display <- layers
+  obj <- fortify.metaMDS(object, ...)
   obj <- obj[obj$Score %in% layers, ]
   ## sort out x, y aesthetics
   vars <- getDimensionNames(obj)
@@ -1016,3 +1053,141 @@ anova3 <- function(lm_mod, ...){
   ## return
   plt
 }
+
+##' @title Fortify a \code{"cca"} object.
+##'
+##' @description
+##' Fortifies an object of class \code{"cca"} to produce a
+##' data frame of the selected axis scores in long format, suitable for
+##' plotting with \code{\link[ggplot2]{ggplot}}.
+##'
+##' @details
+##' TODO
+##'
+##' @param model an object of class \code{"cca"}, the result of a call to
+##' \code{\link[vegan]{cca}}, \code{\link[vegan]{rda}}, or
+##' \code{\link[vegan]{capscale}}.
+##' @param data currently ignored.
+##' @param axes numeric; which axes to extract scores for.
+##' @param display numeric; the scores to extract in the fortified object.
+##' @param ... additional arguments passed to \code{\link[vegan]{scores.cca}},
+##'   and \code{\link[vegan]{scores.rda}}.
+##' @return A data frame in long format containing the ordination scores.
+##' The first two components are the axis scores.
+##' @author Gavin L. Simpson
+##'
+##' @method fortify cca
+##' @export
+##'
+##' @examples
+##' require(vegan)
+##' data(dune)
+##' data(dune.env)
+##'
+##' sol <- cca(dune ~ A1 + Management, data = dune.env)
+##' head(fortify(sol))
+`fortify.cca` <- function(model, data, axes = 1:6,
+                          display = c("sp", "wa", "lc", "bp", "cn"), ...) {
+  ## extract scores
+  scrs <- scores(model, choices = axes, display = display, ...)
+  ## handle case of only 1 set of scores
+  if (length(display) == 1L) {
+    scrs <- list(scrs)
+    nam <- switch(display,
+                  sp = "species",
+                  species = "species",
+                  wa = "sites",
+                  sites = "sites",
+                  lc = "constraints",
+                  bp = "biplot",
+                  cn = "centroids",
+                  stop("Unknown value for 'display'"))
+    names(scrs) <- nam
+  }
+  miss <- vapply(scrs, function(x ) all(is.na(x)), logical(1L))
+  scrs <- scrs[!miss]
+  nams <- names(scrs)
+  nr <- vapply(scrs, FUN = NROW, FUN.VALUE = integer(1))
+  df <- do.call('rbind', scrs)
+  rownames(df) <- NULL
+  df <- as.data.frame(df)
+  df <- cbind(Score = factor(rep(nams, times = nr)),
+              Label = unlist(lapply(scrs, rownames), use.names = FALSE),
+              df)
+  df
+}
+
+##' @title Fortify a \code{"metaMDS"} object.
+##'
+##' @description
+##' Fortifies an object of class \code{"metaMDS"} to produce a
+##' data frame of the selected axis scores in long format, suitable for
+##' plotting with \code{\link[ggplot2]{ggplot}}.
+##'
+##' @details
+##' TODO
+##'
+##' @param  model an object of class \code{"metaMDS"}, the result of a call
+##' to \code{\link[vegan]{metaMDS}}.
+##' @param data currently ignored.
+##' @param ... additional arguments passed to
+##' \code{\link[vegan]{scores.metaMDS}}. Note you can't use \code{display}.
+##' @return A data frame in long format containing the ordination scores.
+##' The first two components are the axis scores.
+##' @author Gavin L. Simpson
+##'
+##' @method fortify metaMDS
+##' @export
+##'
+##' @importFrom ggplot2 fortify
+##' @importFrom vegan scores
+##'
+##' @examples
+##' ## load example data
+##' require(vegan)
+##' data(dune)
+##'
+##' ord <- metaMDS(dune)
+##' head(fortify(ord))
+`fortify.metaMDS` <- function(model, display="sites") {
+  samp <- scores(model, display = "sites")
+  # spp <- tryCatch(scores(model, display = display),
+  #                 error = function(c) {NULL})
+  spp <- scores(model, display="species")
+  if("sites" %in% display && "species" %in% display){
+    #print("sites and species")
+    df <- rbind(samp, spp)
+    df <- as.data.frame(df)
+    df <- cbind(Score = factor(rep(c("sites","species"),
+                                   c(nrow(samp), nrow(spp)))),
+                Label = c(rownames(samp), rownames(spp)),
+                df)
+  } else if ("sites" %in% display){
+    #print("sites only")
+    df <- as.data.frame(samp)
+    df <- data.frame(Score = factor(rep("sites", nrow(df))),
+                     Label = rownames(samp),
+                     samp)
+  } else {
+    #print("spp only")
+    df <- as.data.frame(spp)
+    df <- data.frame(Score = factor(rep("species", nrow(df))),
+                     Label = rownames(spp),
+                     spp)
+  }
+  # if (!is.null(spp)) {
+  #   df <- rbind(samp, spp)
+  #   df <- as.data.frame(df)
+  #   df <- cbind(Score = factor(rep(c("sites","species"),
+  #                                  c(nrow(samp), nrow(spp)))),
+  #               Label = c(rownames(samp), rownames(spp)),
+  #               df)
+  # } else {
+  #   df <- data.frame(Score = factor(rep("sites", nrow(df))),
+  #                    Label = rownames(samp),
+  #                    samp)
+  # }
+  rownames(df) <- NULL
+  df
+}
+
