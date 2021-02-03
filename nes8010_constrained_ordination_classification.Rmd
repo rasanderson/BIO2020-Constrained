@@ -1,9 +1,9 @@
 ---
 title: "NES8010 Quantitative Ecological Research Methods"
-subtitle: "Multivariate analysis: constrained ordination and classification"
-#author: "Roy Sanderson"
-#date: "November 7, 2017"
+subtitle: 'Multivariate analysis: constrained ordination and classification'
 output:
+  html_document:
+    df_print: paged
   word_document:
     reference_docx: template.docx
 ---
@@ -293,10 +293,10 @@ ggplot(dune_sco, aes(x=PC1, y=PC2, fill=Use)) +
 ## Classification
 
 ### Aims
-These exercises will allow you to explore more of the theory that is covered in the final lectures of the module, in particular classification of multivariate data (and its display), and ways of overlaying classification results onto ordinations to aid their interpretation.
+These exercises will allow you to explore more of the theory that is covered my lectures of the module, in particular classification of multivariate data (and its display), and ways of overlaying classification results onto ordinations to aid their interpretation.
 
 ## Multivariate classification or clustering
-The vegan package has a number of functions that allow you to do hierarchical classifications of species x samples data tables, and to sort your original tables of data to show the main trends.  Packages such as MASS (default) and labdsv also provide functions for fuzzy clustering and indicator species analysis.  We will focus on the tools available in vegan, using its example "dune" dataset.
+The `vegan` package has a number of functions that allow you to do hierarchical classifications of species x samples data tables, and to sort your original tables of data to show the main trends.  Packages such as `MASS` (already installed by default) and `labdsv` also provide functions for fuzzy clustering and indicator species analysis.  We will focus on the tools available in `vegan`, using its example `dune` dataset.
 
 Many classification methods are based on measuring 'dissimilarity' between samples, based on the species composition.  Therefore clustering is often a two-step process, involving the construction of a dissimilarity table, and then using an appropriate method to split this table up into separate classes:
 
@@ -314,7 +314,7 @@ dune.dis <- vegdist(dune)
 
 The table above is a 'triangular matrix' showing the dissimilarity in species composition.  Only half the matrix is needed as this top-right triangle would contain the same information.  Vales range between zero and one, with sites that are similar to each other having the lowest values (lowest dissimiliarity).
 
-There are a number of ways of calculating ecological dissimilarity; the default used by vegdist is the Bray-Curtis index; other common ones you may see used are the Euclidean index and the Gower index (see the help page for the vegdist function for the full list of indices available).
+There are a number of ways of calculating ecological dissimilarity; the default used by `vegdist` is the Bray-Curtis index; other common ones you may see used are the Euclidean index and the Gower index (see the help page for the vegdist function for the full list of indices available).
 Now that you have calculated the dissimilarity values you can classify and plot the results.  Hierarchical classification produces a dendrogram or tree-like graph to describe the classification; the shape of this graph differs depending on the algorithm used, but I usually find the 'average' linkage method (based on the average dissimilarity between groups of sites) the most robust:
 
 ```{r classify dune data}
@@ -370,34 +370,44 @@ ggplot(dune.env, aes(x=as.factor(dune.grp), y=A1)) +
 Likewise, apply your classification to a PCA:
 
 ```{r dune pca with ordihull for schedule, eval=FALSE}
-dune.pca <- rda(dune)
-plot(dune.pca, dis="sites")
+dune.pca <- ordi_pca(dune)
 
-ordihull(dune.pca, groups=dune.grp, show.groups=1, col="red")
-ordihull(dune.pca, groups=dune.grp, show.groups=2, col="green")
-ordihull(dune.pca, groups=dune.grp, show.groups=3, col="blue")
+dune_sco <- ordi_scores(dune.pca, display="sites")
+dune_sco <- mutate(dune_sco, group_code = as.factor(dune.grp))
 
-legend(locator(), legend=c("Class 1", "Class 2", "Class 3"), col=c("red", "green", "blue"), lty=1)
+ggplot(dune_sco, aes(x=PC1, y=PC2, fill=group_code)) +
+  geom_point() +
+  geom_chull(alpha=0.5) +
+  scale_fill_discrete(name = "Classification",
+                      labels = c("Group 1", "Group 2", "Group 3"))
+
 ```
 ```{r dune pca with ordihull eval not echo, echo=FALSE}
-dune.pca <- rda(dune)
-plot(dune.pca, dis="sites")
+dune.pca <- ordi_pca(dune)
 
-ordihull(dune.pca, groups=dune.grp, show.groups=1, col="red")
-ordihull(dune.pca, groups=dune.grp, show.groups=2, col="green")
-ordihull(dune.pca, groups=dune.grp, show.groups=3, col="blue")
+dune_sco <- ordi_scores(dune.pca, display="sites")
+dune_sco <- mutate(dune_sco, group_code = as.factor(dune.grp))
 
-legend(x=1.5, y=-1, legend=c("Class 1", "Class 2", "Class 3"), col=c("red", "green", "blue"), lty=1, cex=0.5)
+ggplot(dune_sco, aes(x=PC1, y=PC2, fill=group_code)) +
+  geom_point() +
+  geom_chull(alpha=0.5) +
+  scale_fill_discrete(name = "Classification",
+                      labels = c("Group 1", "Group 2", "Group 3"))
+
 ```
 
-Well done - the above graph shows a multivariate ordination (via PCA) of your dune data, overlaid with a multivariate classification (via hclust) of the same data.  You also know that the soil depth differs between the three classes, with the highest values (and greatest variability) in Class 2.  If you prefer, a similar graph can be produced using `ggplot` with the `stat_chull` function described earlier; you can use `geom_text_repel` if you want to add the sample numbers.
+**Question** What happens to your display if in the `mutate` code line you omit
+the `as.factor()` statement and simply put `group_code = dune.grp` ? Why does
+this change occur?
+
+Well done - the above graph shows a multivariate ordination (via PCA) of your dune data, overlaid with a multivariate classification (via hclust) of the same data.  You also know that the soil depth differs between the three classes, with the highest values (and greatest variability) in Group 2.
 
 
 ## Species classification
-Just as you can classify the sites, so you can classify species; you simply have to transpose (turn through 90 degrees) the original dune data.frame via the `t()` function when calling the `vegdist` command:
+Just as you can classify the sites, so you can classify species; you simply have to transpose (turn through 90 degrees) the original dune data.frame via the `t()` function when calling the `vegdist` command. The Raup-Crick distance measure is particularly useful for species, especially when there are many zeros in your table, which is typical of ecological data.
 
 ```{r veg classification, eval=FALSE}
-dunespp.dis <- vegdist(t(dune))
+dunespp.dis <- vegdist(t(dune), method = "raup")
 dunespp.clc <- hclust(dunespp.dis, method="complete")
 plot(dunespp.clc)
 ```
@@ -405,7 +415,30 @@ plot(dunespp.clc)
 Compare the dendrogram with your species PCA plot of these data.  Notice how in the dendrogram that species such as Sagpro and Junbuf, which are close together in the PCA plot are grouped close to each other in the classification etc.
 
 ### Other useful functions
-The vegan package contains several useful additional functions.  For example, you may also wish to investigate a simple procedure for producing species x samples tables sorted by the results of an ordination.  This can make patterns in your raw data table much clearer.  See the example using the __`vegemite`__ (not marmite!) function in the vegan tutorial. I suggest you try this with the standard `dune` dataset. First create an unconstrained ordination (e.g. PCA, DCA, CA or NMDS), then give the `vegemite` function the original `dune` vegetation, and the results of your ordination to print the sorted species x samples table. For a really jazzy output, use the `tabasco` command which produces the same table but in the form of a colourful "heatmap" (please don't blame me for the silly names of these two functions!)
+The vegan package contains several useful additional functions.  For example, you may also wish to investigate a simple procedure for producing species x samples tables sorted by the results of an ordination.  This can make patterns in your raw data table much clearer.  See the example using the __`vegemite`__ (not marmite!) function in the vegan tutorial. I suggest you try this with the standard `dune` dataset. First create an unconstrained ordination (e.g. PCA, DCA, CA or NMDS), then give the `vegemite` function the original `dune` vegetation, and the results of your ordination to print the sorted species x samples table. For a really jazzy output, use the `tabasco` command which produces the same table but in the form of a colourful "heatmap" (please don't blame me for the silly names of these two functions! Anyway, I prefer Marmite)
+
+```{r vegemite}
+dune.pca <- ordi_pca(dune)
+vegemite(dune, dune.pca)
+```
+
+This table re-orders your sites and species in a compact form, based on the results of your PCA of the dune data. The abundance is shown by a simple score of 1 to 9, with a dot representing absence.
+
+A particularly nice trick is to use `tabasco()` and then cross-display the relevant dendrograms for the sites and species at either side. Let's do this with the dune data:
+
+```{r tabasco, eval=FALSE}
+# Create the dendrogram for the samples using default Bray-Curtis
+quadrat_tree <- hclust(vegdist(dune), "average")
+
+# Use Raup-Crick for the species, plus t() to transpose
+spp_tree <- hclust(vegdist(t(dune), "raup"), "average")
+
+# Create heatmap
+tabasco(dune, quadrat_tree, spp_tree)
+```
+
+**Note** After running the last command when your heatmap is displayed most species will not be showing. Click on the Plots window (top-right) to enlarge the window to full-size to see all the species.
+
 
 ## Working with Excel data
 So far you have used in-built datasets, but in practice you will work with data from Excel spreadsheets etc. The way in which these may have been stored (e.g. 'long' versus 'wide' format) may require minor data "wrangling" before you can analyse it with `vegan`. For multivariate analysis `vegan` expects 'wide' format, with column names and row names.
@@ -463,6 +496,7 @@ rocky_spp_long
 The long format is often easier for plotting (and can be more compact if, as here, the zero entries are removed, although this is optional). To convert back to "wide" format, use the `pivot_wider` function:
 
 ```{r pivotting long to wide}
-rocky_spp_long %>% pivot_wider(names_from = "Species", values_from = "Count")
+rocky_spp_long %>%
+   pivot_wider(names_from = "Species", values_from = "Count")
 ```
 You'll notice that the above sets the values for species not present in a sample to `NA`. Look at the help for `pivot_wider` to determine how to replace the `NA` values with zeros.
