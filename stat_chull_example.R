@@ -12,5 +12,5 @@ dune.sco <- data.frame(scores(dune.pca, display="sites"), Use=as.factor(dune.env
 
 ggplot(dune.sco, aes(x=PC1, y=PC2, fill=Use)) +
   geom_point() +
-  stat_chull(alpha=0.5) + 
+  geom_chull(alpha=0.5) + 
   theme_classic()

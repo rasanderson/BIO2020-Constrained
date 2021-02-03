@@ -6,7 +6,7 @@ StatChull <- ggproto("StatChull", Stat,
                      
                      required_aes = c("x", "y")
 )
-stat_chull <- function(mapping = NULL, data = NULL, geom = "polygon",
+geom_chull <- function(mapping = NULL, data = NULL, geom = "polygon",
                        position = "identity", na.rm = FALSE, show.legend = NA, 
                        inherit.aes = TRUE, ...) {
   layer(

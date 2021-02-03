@@ -14,10 +14,16 @@ knitr::opts_chunk$set(fig.width=3.5, fig.height=3.5)
 rm(list=ls())
 library(tidyverse)
 library(vegan)
+source("nes8010.R")
 ```
 
 ## Introduction
-In the last practical you used major __unconstrained__ ordination methods: linear (Principal Components Analysis PCA  via `rda` command) , unimodal (Correspondence Analysis CA via `cca` command) and non-metric (Non-metric multidimensional scaling NMDS via `metaMDS` command).  Typically your input table of data will be in the form of samples (sites) as rows and attributes (species) as columns, e.g.:
+In the last practical you used major __unconstrained__ ordination methods:
+linear (Principal Components Analysis PCA  via `ordi_pca` command) , unimodal
+(Correspondence Analysis CA via `ordi_ca` command) and non-metric (Non-metric
+multidimensional scaling NMDS via `ordi_nmds` command).  Typically your input 
+table of data will be in the form of samples (sites) as rows and attributes 
+(species) as columns, e.g.:
 
 * samples x species matrix
 * samples x gene descriptor
@@ -36,7 +42,14 @@ You used the output from your ordinations in combination with environmental data
 Most of today's practical will use in-built datasets within the `vegan` package, so that you can learn the analytical techniques quickly. However, we will also look at an example dataset collected by a project student at St Mary's Lighthouse, to give you an understanding of good practice when importing from Excel, and preparing data for `vegan` analysis.
 
 ## Before you begin
-In RStudio, please create a new project in an empty folder, the create an empty R Script file in which you should include all your commands, comments etc.
+In RStudio, please create a **new project** in an empty folder, then create an empty R Script file in which you should include all your commands, comments etc. Put a copy of the `nes8010.R` script (available on Canvas) into your project folder. Begin your script with a comment to explain its contents, then begin by loading various libraries and running the `nes8010.R` script:
+
+```{r initialise_stuff}
+library(tidyverse)
+library(vegan)
+source("nes8010.R")
+```
+
 
 ## Problem of non-independence of sample scores
 We will load an example dataset, from a survey of Scandinavian lichen pasture vegetation grazed by reindeer, plus associated soil environmental variables.  As this is an example data for the vegan package you can load it via the data command:
@@ -44,31 +57,32 @@ We will load an example dataset, from a survey of Scandinavian lichen pasture ve
 Load the vegan library to access some of the additional commands you will use in MVT, then use the example lichens dataset (see `?varespec` for more information).  After loading the lichen data `varespec` have a quick look at it in the RStudio viewer etc.
 
 ```{r load up lichen data}
-library(vegan)
 data(varespec)
 ```
 
 You noticed a problem with an arch effect in this dataset in a previous practical, so we will use CA, correspondence analysis (via `cca` command), rather than PCA:
 
 ```{r ca of lichens}
-varespec.ca <- cca(varespec)
-plot(varespec.ca, display="sites")
-plot(varespec.ca, display="species")
+varespec.ca <- ordi_ca(varespec)
+ordi_plot(varespec.ca, display="sites")
+ordi_plot(varespec.ca, display="species")
 ```
 ```{r summary for printing, eval=FALSE}
 summary(varespec.ca)
 ```
 The summary command produces a lot of output.  As usual focus on CA1 and CA2, and work out the % variation explained by these two axes.
 
-In today's practical for speed we will just use the default plotting routines, but remember that much better plots are possible via `ggplot2` + `ggrepel` libraries, or by exporting to Excel. In the last practical you learnt how to extract samples (sites) scores and compare them with potential environmental or management explanatory variables after doing the ordination.  A problem with this method of 'post-ordination' analysis is that it assumes that the score for any sample (site) in Axis 1 is independent of all the other samples in Axis 1.  This is an assumption with all x vs y analyses; it is assumed that all the y-values are independent.  __In ordination they are not.__  For example, note the effect of removing sample number 28 (row number 9 in your dataset):
+In the last practical you learnt how to extract samples (sites) scores and compare them with potential environmental or management explanatory variables after doing the ordination.  A problem with this method of 'post-ordination' analysis is that it assumes that the score for any sample (site) in Axis 1 is independent of all the other samples in Axis 1.  This is an assumption with all x vs y analyses; it is assumed that all the y-values are independent.  __In ordination they are not.__  For example, note the effect of removing sample number 28 (row number 9 in your dataset):
 
 ```{r effect of removing one sample}
 varespec28 <- varespec[-9,]  # delete the ninth row (sample code 28)
-varespec28.ca <- cca(varespec28)
+varespec28.ca <- ordi_ca(varespec28)
 
 # Now compare the plots with and without sample 28:
-plot(varespec.ca, display="sites", main="Original")
-plot(varespec28.ca, display="sites", main="Without sample code 28")
+ordi_plot(varespec.ca, display="sites", geom="text") +
+   ggtitle("Original")
+ordi_plot(varespec28.ca, display="sites", geom="text") +
+   ggtitle("Without sample code 28")
 ```
 
 Notice how all the sample points move quite dramatically; both Axis 1 and Axis 2 have changed to mirror images of the original following the removal of just one sample.  The relative positions of the remaining samples have also changed slightly.  Clearly the sample scores are not independent of each other, as we assumed in the last practical when you first did an ordination, and then undertook a separate analysis (e.g. via a linear model) of the ordination scores and environmental data.
@@ -77,7 +91,7 @@ Notice how all the sample points move quite dramatically; both Axis 1 and Axis 2
 ## Constrained ordination
 Constrained ordination differs in that the explanatory variables are included in the ordination analysis itself.  These explanatory variables might be environmental, management, experimental, spatial or temporal (time-based).  Analysis of the effects of all these variables separate from the initial ordination can also be awkward and difficult to interpret, whereas including them in the ordination itself makes their effects simpler to understand.  We will continue with the `varechem` dataset, which contains environmental (chemical) data associated with the `varespec` species data.  As this is an example dataset within R, you can find additional information via `help(varechem)` or `?varechem`.
 
-Constrained unimodal ordination, Constrained Correspondence Analysis (CCA) is also performed with the `cca` command, whilst constrained linear ordination, Redundancy Analysis (RDA) is done via the `rda` command.  You indicate to R that you are doing a constrained rather than unconstrained analysis by inclusion of the explanatory variables in the command.:
+Constrained unimodal ordination, Constrained Correspondence Analysis (CCA) is also performed with the `ordi_cca` command, whilst constrained linear ordination, Redundancy Analysis (RDA) is done via the `ordi_rda` command.  You indicate to R that you are doing a constrained rather than unconstrained analysis by inclusion of the explanatory variables in the command.:
 
 ```{r varechem data}
 data(varechem)   # Load up the environmental data
@@ -87,23 +101,42 @@ summary(varechem)   # Summary of varechem
 You have fourteen potential explanatory variables; we will just use a few here for simplicity; you specify them to the right hand side of an R equation, similar to the `lm` and `glm` commands you have already encountered. The following `cca` line tells R to undertake a CCA, with *all* the species as "response" variables, and potassium, phosphorus, aluminium, soil pH and the amount of bare soil as "explanatory" variables. The result is stored in `varespec.cca`. *Question*: There are 44 species of plant in the varespec table. What is the problem (other than the time it would take!!) in running 44 separate linear models?
 
 ```{r cca of varespec with chemical}
-varespec.cca <- cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
-plot(varespec.cca)
+varespec.cca <- ordi_cca(varespec ~ K + P + Al + pH + Baresoil, data=varechem)
+ordi_plot(varespec.cca)
 ```
 
 This produces a 'triplot' which displays the samples (sites), attributes (species) and environmental variables (arrows) in one plot.  If you find this too complex to interpret, you can display only two sets of information at a time:
 
-```{r biplot sites bp, eval=FALSE}
-plot(varespec.cca, display=c("sites", "bp"))
+```{r biplot sites bp, eval=TRUE}
+ordi_plot(varespec.cca, display=c("sites", "bp"), geom="text")
 ```
 
 to display samples with environmental variables ("bp" is for "biplot" scores of environmental arrows).  The species equivalent is:
 
-```{r biplot spp bp, eval=FALSE}
-plot(varespec.cca, display=c("species", "bp"))
+```{r biplot spp bp, eval=TRUE}
+ordi_plot(varespec.cca, display=c("species", "bp"), geom="text")
 ```
 
-On your own: repeat the CCA but __partial-out__ or __condition__ the effect of Baresoil so that its effects are accounted for already in the final results.  Use the `Condition` option in CCA; i.e. `Condition(Baresoil)` in your CCA equation.  What is the impact of this? [__Hint:__ when you partial out a variable, the effects of the other variables is shown after taking account of the partialled-out variable]
+If you want to display the two plots side-by-side, save the plots into an R object, then use the `multi_plot()` function (from `nes8010.R`):
+
+```{r, eval=FALSE}
+varespec_sites_plt <- ordi_plot(varespec.cca, display=c("sites", "bp"), geom="text")
+varespec_spp_plt <- ordi_plot(varespec.cca, display=c("species", "bp"), geom="text")
+multi_plot(varespec_sites_plt, varespec_spp_plt, cols=2)
+```
+
+
+This plot with all the species in it is rather cluttered, especially for the **ubiquitous** species that occur in the centre of the plot. Therefore, you may prefer to annotate species
+interactively:
+
+```{r biplot_spp_bp, eval=FALSE}
+varespec_spp_plt <- ordi_plot(varespec.cca, display=c("species", "bp"), geom="point")
+varespec_spp_plt
+ordi_identify(varespec_spp_plt)
+```
+
+
+On your own: repeat the CCA but __partial-out__ or __condition__ the effect of Baresoil so that its effects are accounted for already in the final results.  Use the `Condition` option in CCA; i.e. change `Baresoil` to `Condition(Baresoil)` in your CCA equation.  What is the impact of this? [__Hint:__ when you partial out a variable, the effects of the other variables is shown after taking account of the partialled-out variable]
 
 ## Interpretation of biplots or triplot
 The closer together any two sample scores are to each other, the __more similar__ they are in their species (attribute) composition.  Two sample scores far apart from each other in the plot have few attributes in common and are relatively dissimilar from each other.  Likewise, two species that are plotted close together are found in the same samples etc.  The __importance__ of each environmental variable is represent by the __length__ of the arrows.  Hence P, Baresoil and Al are relatively important variables, whereas K and pH appear to be less important in these data.
@@ -143,8 +176,8 @@ You can see that both Axis 1 and Axis 2 are highly significant.  You can increas
 If you have a large number of potential explanatory variables, vegan offers a stepwise selection method.  For example, there are actually 14 soil variables in the varechem dataset.  To put them all into your CCA you can undertake.  In the commands below, the   ~ .  indicates that all 14 soil chemical variables are to be included as explanatory variables:
 
 ```{r stepwise of cca, eval=FALSE}
-varespec.bigcca <- cca(varespec ~ . , data=varechem)
-varespec.mincca <- ordistep(varespec.bigcca)
+varespec.bigcca <- ordi_cca(varespec ~ . , data=varechem)
+varespec.mincca <- ordi_step(varespec.bigcca)
 ```
 
 This produces lots of screen output as it thins down the original large number of explanatory variables to the minimum set of most plausible ones.  It will generally retain some non-significant variables for you to consider more fully, due to the known problems of stepwise techniques.
@@ -162,12 +195,17 @@ The depth of the A1 soil horizon is a continuous variable, Management type is a 
 For simplicity, we will simply include A1 soil horizon and Management type in the constrained analysis.  We will do a __linear__ constrained analysis, as you did a PCA (linear) on the dune data initially.  __Remember__: CA and CCA are _unimodal_ methods, whilst PCA and RDA are _linear_ methods. Again, we use the `rda` command, but now with explanatory variables.  By including explanatory variables, R automatically performs a RDA or redundancy analysis:
 
 ```{r rda of dune, eval=FALSE}
-dune.rda <- rda(dune ~ A1 + Management, data=dune.env)
-plot(dune.rda, display=c("sites", "cn"))
-plot(dune.rda, display=c("species", "cn"))
+dune.rda <- ordi_rda(dune ~ A1 + Management, data=dune.env)
+ordi_plot(dune.rda, display=c("sites", "cn"))
+ordi_plot(dune.rda, display=c("species", "cn"))
 ```
 
-This displays your sample scores and environmental variables, and a second graph of species scores and environmental variables.  As before, the A1 variable (soil depth), a continuous variable, is represented by an arrow, its length suggesting that it is an important explanatory variable in the analysis.  The Management variable, being a categorical factor, is now displayed by points.  Management techniques BF (biological farming) and HF (hobby farming) are similar to each other, and differ from NM (nature conservation management) along the RDA Axis 1 (x-axis).  SF (standard farming) unsurprisingly differs from all three of the others, along the second RDA Axis 1 (y-axis).
+This displays your sample scores and environmental variables, and a second graph of species scores and environmental variables.  As before, the A1 variable (soil depth), a continuous variable, is represented by an arrow, its length suggesting that it is an important explanatory variable in the analysis.  The Management variable, being a categorical factor, is now displayed by points rather than arrows.  Management techniques BF (biological farming) and HF (hobby farming) are similar to each other, and differ from NM (nature conservation management) along the RDA Axis 1 (x-axis).  SF (standard farming) unsurprisingly differs from all three of the others, along the second RDA Axis 1 (y-axis).
+
+**Note** You can see that the `Management` variable name is actually quite long; in the display you get the variable name plus the "level" within the factor, i.e. `ManagementSF`, `ManagementNM` etc. These are quite long and may be awkward in your display. If this is a problem you can either:
+
+* extend the x-axis and y-axis limits using `xlim(-2.5, 1.5)` and `ylim(-2, 2.25)` to your `ordi_plot()` call as two extra lines
+* shorten the name of the variable, e.g. from `Management` to `Mgt` so that it is easier to display.
 
 __*On your own*__: what is the statistical significance of A1 and farm Management?  Do permutation tests on both the terms in your constrained ordination, and the axes.
 
@@ -175,30 +213,30 @@ __*On your own*__: what is the statistical significance of A1 and farm Managemen
 If you have a table of data, Y, of samples (rows) by attributes (columns),  you can undertake unconstrained analyses using:
 
 ```{r examples rda, eval=FALSE}
-rda(Y)     # Linear unconstrained: Principal Components Analysis
+ordi_pca(Y)     # Linear unconstrained: Principal Components Analysis
 ```
 
 Sometimes the arch effect is a problem, in which case try:
 
 ```{r examples cca metaMDS, eval=FALSE}
-cca(Y)     # Unimodal unconstrained: Correspondence Analysis
-metaMDS(Y) # Non-metric distance-based: Non-metric MDS
+ordi_ca(Y)     # Unimodal unconstrained: Correspondence Analysis
+ordi_nmds(Y) # Non-metric distance-based: Non-metric MDS
 ```
 
 If you also have a table of explanatory data, X, that contains variables x1, x2, x3, you can undertake constrained analyses using:
 
 ```{r constrained rda or cca, eval=FALSE}
-rda(Y ~ x1 + x2 + x3, data=X)   # Linear: Redundancy Analysis
-cca(Y ~ x1 + x2 + x3, data=X)   # Unimodal: Constrained CA 
+ordi_rda(Y ~ x1 + x2 + x3, data=X)   # Linear: Redundancy Analysis
+ordi_cca(Y ~ x1 + x2 + x3, data=X)   # Unimodal: Constrained CA 
 ```
 
 To display:
 
 ```{r example plot types, eval=FALSE}
-plot(Y.rda)  # Triplot Samples, Attributes, explanatory variables
-plot(Y.rda, display=c("sites", "bp"))   #Biplot=Samples, Arrows 
-plot(Y.rda, display=c("sites", "cn"))   #Biplot=Samples, Centroids 
-plot(Y.rda, display=c("species", "cn")) #Biplot=Attribut,Centroids
+ordi_plot(Y.rda)  # Triplot Samples, Attributes, explanatory variables
+ordi_plot(Y.rda, display=c("sites", "bp"))   #Biplot=Samples, Arrows 
+ordi_plot(Y.rda, display=c("sites", "cn"))   #Biplot=Samples, Centroids 
+ordi_plot(Y.rda, display=c("species", "cn")) #Biplot=Attribut,Centroids
 ```
 
 To test significance:
@@ -210,56 +248,47 @@ anova(Y.rda, by="margin")  # Test explanatory variables
 
 
 ## Useful ordination graphics
-Part of the skill in ordination is to display them in ways that aid their biological interpretation.  Here you will learn how to put coloured polygons around groups of points in your ordination graph to help you interpret them.  Use the dune and dune.env dataset for these examples.
+Part of the skill in ordination is to display them in ways that aid their biological interpretation.  Here you will learn how to put coloured polygons around groups of points in your ordination graph to help you interpret them.  Use the `dune` and `dune.env` dataset for these examples.
 
 Summarise the dune data then do a PCA as before:
 
 ```{r example dune not eval, eval=FALSE}
 summary(dune.env)  # Notice the three categories for Use
-dune.pca <- rda(dune)
-plot(dune.pca, display="sites", type="points")
+dune.pca <- ordi_pca(dune)
 ```
+Next, you'll find it easiest to extract the dune PC1 and PC2 scores using `ordi_scores()`, and add the management to them via the `mutate()` function. Finally you can assemble them into a `ggplot` graph. The `nes8010.R` script adds a `geom_chull()` function which makes it easier to add a "convex hull" around a set of points in your graph:
 
-The `type="points"` option ensures that only simple points and not text are produced in the graph for clarity.  Now produce an annotated plot based on the farm management (hayfield, hay-pasture, or pasture):
-
-```{r example ordihull not eval, eval=FALSE}
-with(dune.env, ordihull(dune.pca, Use, show.groups="Hayfield", col="blue"))
-with(dune.env, ordihull(dune.pca, Use, show.groups="Haypastu", col="green"))
-with(dune.env, ordihull(dune.pca, Use, show.groups="Pasture", col="red"))
-```
-Complete your diagram by adding a figure legend at the top-right of the plot; the next line looks complicated but it simply puts the legend at the top right of the plot, `lty` stands for line type (`lty=1` is a solid line), and you specify the colours (in the right order to match the ones used in ordihull above!).
-
-```{r add legend interactively, eval=FALSE}
-legend(locator(1), legend=c("Hayfield", "Hay pasture", "Pasture"),  col=c("blue", "green", "red"), lty=1)
-```
-
-and click on your graph in the position where you want to place your legend:
-```{r produce graph but hide code, echo=FALSE}
+```{r convex_hulls-setup}
 data(dune)
 data(dune.env)
-dune.pca <- rda(dune)
-plot(dune.pca, display="sites", type="points")
-with(dune.env, ordihull(dune.pca, Use, show.groups="Hayfield", col="blue"))
-with(dune.env, ordihull(dune.pca, Use, show.groups="Haypastu", col="green"))
-with(dune.env, ordihull(dune.pca, Use, show.groups="Pasture", col="red"))
-legend(x=1.5, y=-1, legend=c("Hayfield", "Hay pasture", "Pasture"),  col=c("blue", "green", "red"), lty=1, cex=0.5)
+dune.pca <- ordi_pca(dune)
 ```
 
-Remember that you can use the `ggvegan` package to improve the quality of your constrained ordination plots. You can also produce a similar plot with the `stat_chull` (for convex hull), in fewer lines. This is an extra function, so I have created a separate R script that you should download from Blackboard and `source` to activate the function first:
+```{r convex_hulls}
+dune_sco <- ordi_scores(dune.pca, display="sites")
 
-```{r with stat_chull}
-source("H:/Downloads/stat_chull.R") # Assuming in your Downloads folder
+dune_sco <- mutate(dune_sco, Use = dune.env$Use)
 
-# Create a dataframe with PC site scores and Use
-dune.sco <- data.frame(scores(dune.pca, display="sites"), Use=as.factor(dune.env$Use))
-
-ggplot(dune.sco, aes(x=PC1, y=PC2, fill=Use)) +
+ggplot(dune_sco, aes(x=PC1, y=PC2, fill=Use)) +
   geom_point() +
-  stat_chull(alpha=0.5) + # alpha changes the transparency
-  theme_classic()
+  geom_chull(alpha=0.5) + # What do you think alpha does??
+  theme_classic()  # Add this if you don't like the grey background!
+
 ```
 
-If you successfully install the `ggvegan` package (optional) you may want to experiment with plotting constrained ordinations such as CCA or RDA results.
+Sometimes you may want to change the default names in a legend. For example in this dataset, `Haypastu` is used instead of `Hay pasture`. Likewise, you might not want `Use` but would prefer `Field use` in the legend. You can tweak these with:
+
+```{r, eval=FALSE}
+ggplot(dune_sco, aes(x=PC1, y=PC2, fill=Use)) +
+  geom_point() +
+  geom_chull(alpha=0.5) + 
+  scale_fill_discrete(name = "Field Use",
+                      labels = c("Hayfield", "Hay pasture", "Pasture")) +
+  theme_classic()  
+
+```
+
+
 
 ## Classification
 
